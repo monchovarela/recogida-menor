@@ -7,42 +7,43 @@
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Seguridad - Recogida de Menores</title>
+    <title>Gestión de Recogida de Menores (Online/IndexedDB)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <style>
-        .signature-pad { border: 2px dashed #cbd5e1; cursor: crosshair; touch-action: none; }
+        .signature-pad { border: 2px dashed #cbd5e1; cursor: crosshair; touch-action: none; background: #f8fafc; }
         .modal { transition: all 0.3s ease; }
         body.modal-active { overflow: hidden; }
-        .input-field { @apply w-full px-4 py-3 rounded-sm bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white transition-all outline-none; }
     </style>
 
 
-    <div class="max-w-6xl mx-auto">
-        <header class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 bg-white p-6 rounded-sm shadow-sm border border-slate-200">
+
+    <div class="m-5">
+        <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
             <div>
-                <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">Registro de Recogida de Menores</h1>
-                <p class="text-slate-500 text-sm">Panel de control de seguridad y trazabilidad.</p>
+                <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Registro de Recogidas</h1>
+                <p class="text-slate-500">Gestión de seguridad infantil (Almacenamiento Local).</p>
             </div>
-            <div class="flex gap-3">
-                <button onclick="toggleModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-sm font-bold transition-all shadow-lg shadow-indigo-200 flex items-center gap-2">
-                    <span>+ Nueva Recogida</span>
+            <div class="flex gap-2">
+                <button onclick="openModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 roundex-sm font-bold shadow-lg shadow-indigo-100 transition-all">
+                    + Nueva Recogida
                 </button>
-                <button onclick="exportToExcel()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-sm font-bold transition-all shadow-lg shadow-emerald-200 flex items-center gap-2">
-                    <span>Exportar Excel</span>
+                <button onclick="exportToExcel()" class="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-6 py-3 roundex-sm font-bold transition-all flex items-center gap-2">
+                    <span class="text-emerald-600">Excel</span>
                 </button>
             </div>
         </header>
 
-        <div class="bg-white rounded-sm shadow-sm border border-slate-200 overflow-hidden">
+        <div class="bg-white roundex-sm shadow-sm border border-slate-200 overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
-                    <thead class="bg-slate-50 border-b border-slate-100">
-                        <tr>
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-100">
                             <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Fecha / Hora</th>
                             <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Menor</th>
-                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Recoge / DNI</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Responsable / DNI</th>
                             <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Firma</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-right">Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody" class="divide-y divide-slate-100">
@@ -53,51 +54,46 @@
     </div>
 
     <div id="modal" class="modal opacity-0 pointer-events-none fixed inset-0 flex items-center justify-center z-50 p-4">
-        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="toggleModal()"></div>
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="closeModal()"></div>
         
-        <div class="bg-white w-full max-w-2xl rounded-sm shadow-2xl z-50 overflow-hidden">
+        <div class="bg-white w-full max-w-2xl roundex-sm shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in duration-300">
             <div class="p-8">
-                <div class="flex justify-between items-center mb-8">
-                    <h3 class="text-2xl font-bold text-slate-800">Formulario de Entrega</h3>
-                    <button onclick="toggleModal()" class="text-slate-400 hover:text-slate-600 transition-colors text-2xl font-light">✕</button>
+                <div class="flex justify-between items-center mb-6">
+                    <h3 id="modalTitle" class="text-2xl font-bold text-slate-800">Nueva Recogida</h3>
+                    <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-2xl">✕</button>
                 </div>
 
-                <form id="deliveryForm" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <form id="deliveryForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="hidden" id="editId">
                     <div class="md:col-span-2">
-                        <label class="block text-xs font-bold text-slate-400 uppercase mb-1 ml-1">A quién recoge (Menor)</label>
-                        <input type="text" id="minor" required="" placeholder="Nombre completo del menor" class="w-full px-4 py-3 rounded-sm bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white transition-all outline-none">
+                        <label class="text-xs font-bold text-slate-400 uppercase ml-1">Menor a Recoger</label>
+                        <input type="text" id="minor" required="" class="w-full px-4 py-3 roundex-sm bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none transition-all">
                     </div>
-
                     <div>
-                        <label class="block text-xs font-bold text-slate-400 uppercase mb-1 ml-1">Persona que recoge</label>
-                        <input type="text" id="adult" required="" placeholder="Nombre y apellidos" class="w-full px-4 py-3 rounded-sm bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white transition-all outline-none">
+                        <label class="text-xs font-bold text-slate-400 uppercase ml-1">Persona que recoge</label>
+                        <input type="text" id="adult" required="" class="w-full px-4 py-3 roundex-sm bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none transition-all">
                     </div>
-
                     <div>
-                        <label class="block text-xs font-bold text-slate-400 uppercase mb-1 ml-1">DNI / Documento</label>
-                        <input type="text" id="dni" required="" placeholder="Número de identidad" class="w-full px-4 py-3 rounded-sm bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white transition-all outline-none">
+                        <label class="text-xs font-bold text-slate-400 uppercase ml-1">DNI Responsable</label>
+                        <input type="text" id="dni" required="" class="w-full px-4 py-3 roundex-sm bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none transition-all">
                     </div>
-
                     <div>
-                        <label class="block text-xs font-bold text-slate-400 uppercase mb-1 ml-1">Fecha</label>
-                        <input type="date" id="date" required="" class="w-full px-4 py-3 rounded-sm bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white transition-all outline-none">
+                        <label class="text-xs font-bold text-slate-400 uppercase ml-1">Fecha</label>
+                        <input type="date" id="date" required="" class="w-full px-4 py-3 roundex-sm bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none transition-all">
                     </div>
-
                     <div>
-                        <label class="block text-xs font-bold text-slate-400 uppercase mb-1 ml-1">Hora</label>
-                        <input type="time" id="time" required="" class="w-full px-4 py-3 rounded-sm bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white transition-all outline-none">
+                        <label class="text-xs font-bold text-slate-400 uppercase ml-1">Hora</label>
+                        <input type="time" id="time" required="" class="w-full px-4 py-3 roundex-sm bg-slate-50 border-2 border-transparent focus:border-indigo-500 outline-none transition-all">
                     </div>
-
                     <div class="md:col-span-2">
                         <div class="flex justify-between items-end mb-2">
-                            <label class="text-xs font-bold text-slate-400 uppercase ml-1">Firma de Conformidad</label>
-                            <button type="button" id="clearBtn" class="text-xs text-rose-500 font-bold hover:underline">Limpiar Firma</button>
+                            <label class="text-xs font-bold text-slate-400 uppercase ml-1">Firma del Adulto</label>
+                            <button type="button" onclick="clearSig()" class="text-xs text-rose-500 font-bold hover:underline">Borrar trazo</button>
                         </div>
-                        <canvas id="signatureCanvas" class="signature-pad w-full h-40 bg-slate-50 rounded-sm"></canvas>
+                        <canvas id="signatureCanvas" class="signature-pad w-full h-40 roundex-sm border-2 border-slate-100"></canvas>
                     </div>
-
-                    <button type="submit" class="md:col-span-2 mt-4 bg-indigo-600 text-white font-bold py-4 rounded-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
-                        Finalizar y Registrar
+                    <button type="submit" class="md:col-span-2 bg-indigo-600 text-white font-bold py-4 roundex-sm hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all">
+                        Guardar Registro
                     </button>
                 </form>
             </div>
@@ -105,80 +101,91 @@
     </div>
 
     <script>
-        // DB Init
+        // --- BASE DE DATOS INDEXEDDB ---
         let db;
-        const request = indexedDB.open("SeguridadMenoresDB", 1);
-        request.onupgradeneeded = (e) => {
-            db = e.target.result;
-            db.createObjectStore("entregas", { keyPath: "id", autoIncrement: true });
-        };
-        request.onsuccess = (e) => { db = e.target.result; loadTable(); };
+        const dbRequest = indexedDB.open("SeguridadMenoresDB", 2);
 
-        // Signature Logic
+        dbRequest.onupgradeneeded = (e) => {
+            db = e.target.result;
+            if (!db.objectStoreNames.contains("recogidas")) {
+                db.createObjectStore("recogidas", { keyPath: "id", autoIncrement: true });
+            }
+        };
+
+        dbRequest.onsuccess = (e) => { db = e.target.result; loadTable(); };
+
+        // --- FIRMA ---
         const canvas = document.getElementById('signatureCanvas');
         const ctx = canvas.getContext('2d');
-        let writing = false;
+        let drawing = false;
 
-        function setupCanvas() {
+        function initCanvas() {
             const rect = canvas.getBoundingClientRect();
             canvas.width = rect.width;
             canvas.height = rect.height;
-            ctx.strokeStyle = "#1e293b"; ctx.lineWidth = 3; ctx.lineCap = "round";
+            ctx.strokeStyle = "#0f172a"; ctx.lineWidth = 3; ctx.lineCap = "round";
         }
 
-        const getPos = (e) => {
+        const getXY = (e) => {
             const rect = canvas.getBoundingClientRect();
-            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+            const clientX = e.clientX || e.touches?.[0].clientX;
+            const clientY = e.clientY || e.touches?.[0].clientY;
             return { x: clientX - rect.left, y: clientY - rect.top };
         };
 
-        const startDraw = (e) => { writing = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); };
-        const draw = (e) => { if(!writing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); };
-        const endDraw = () => writing = false;
+        canvas.addEventListener('mousedown', (e) => { drawing = true; ctx.beginPath(); const p = getXY(e); ctx.moveTo(p.x, p.y); });
+        canvas.addEventListener('mousemove', (e) => { if(!drawing) return; const p = getXY(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
+        window.addEventListener('mouseup', () => drawing = false);
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); drawing = true; ctx.beginPath(); const p = getXY(e); ctx.moveTo(p.x, p.y); });
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); if(!drawing) return; const p = getXY(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
 
-        canvas.addEventListener('mousedown', startDraw);
-        canvas.addEventListener('mousemove', draw);
-        window.addEventListener('mouseup', endDraw);
-        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDraw(e); });
-        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); });
+        function clearSig() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
-        document.getElementById('clearBtn').onclick = () => ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // --- CRUD LOGIC ---
+        function openModal(isEdit = false) {
+            document.getElementById('modal').classList.remove('opacity-0', 'pointer-events-none');
+            document.body.classList.add('modal-active');
+            setTimeout(initCanvas, 50);
 
-        // UI Logic
-        function toggleModal() {
-            const modal = document.getElementById('modal');
-            modal.classList.toggle('opacity-0');
-            modal.classList.toggle('pointer-events-none');
-            document.body.classList.toggle('modal-active');
-            
-            if(!modal.classList.contains('opacity-0')) {
-                const now = new Date();
-                document.getElementById('date').valueAsDate = now;
-                document.getElementById('time').value = now.toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'});
-                setTimeout(setupCanvas, 50);
+            if(!isEdit) {
+                document.getElementById('deliveryForm').reset();
+                document.getElementById('editId').value = "";
+                document.getElementById('modalTitle').innerText = "Nueva Recogida";
+                document.getElementById('date').valueAsDate = new Date();
+                document.getElementById('time').value = new Date().toTimeString().slice(0,5);
+                clearSig();
             }
         }
 
-        async function loadTable() {
-            const transaction = db.transaction(["entregas"], "readonly");
-            const data = transaction.objectStore("entregas").getAll();
+        function closeModal() {
+            document.getElementById('modal').classList.add('opacity-0', 'pointer-events-none');
+            document.body.classList.remove('modal-active');
+        }
 
-            data.onsuccess = () => {
+        async function loadTable() {
+            const tx = db.transaction("recogidas", "readonly");
+            const store = tx.objectStore("recogidas");
+            const request = store.getAll();
+
+            request.onsuccess = () => {
                 const tbody = document.getElementById('tableBody');
-                tbody.innerHTML = data.result.reverse().map(reg => `
-                    <tr class="hover:bg-slate-50/80 transition-all">
+                tbody.innerHTML = request.result.reverse().map(r => `
+                    <tr class="hover:bg-slate-50 transition-all">
                         <td class="px-6 py-4">
-                            <div class="text-sm font-bold text-slate-800">${reg.fecha}</div>
-                            <div class="text-xs text-slate-400 font-medium">${reg.hora}</div>
+                            <span class="block text-sm font-bold">${r.fecha}</span>
+                            <span class="text-xs text-slate-400">${r.hora}</span>
                         </td>
-                        <td class="px-6 py-4 font-bold text-indigo-600">${reg.menor}</td>
+                        <td class="px-6 py-4 font-bold text-indigo-600">${r.menor}</td>
                         <td class="px-6 py-4">
-                            <div class="text-sm font-semibold text-slate-800">${reg.adulto}</div>
-                            <div class="text-xs text-slate-400">${reg.dni}</div>
+                            <span class="block text-sm font-medium text-slate-800">${r.adulto}</span>
+                            <span class="text-xs text-slate-400">DNI: ${r.dni}</span>
                         </td>
                         <td class="px-6 py-4 text-center">
-                            <img src="${reg.firma}" class="h-10 mx-auto bg-white rounded border border-slate-100 p-1">
+                            <img src="${r.firma}" class="h-10 mx-auto bg-white border border-slate-100 rounded p-1">
+                        </td>
+                        <td class="px-6 py-4 text-right space-x-2">
+                            <button onclick="editItem(${r.id})" class="text-blue-500 hover:bg-blue-50 p-2 rounded-lg transition-colors">✎</button>
+                            <button onclick="deleteItem(${r.id})" class="text-rose-500 hover:bg-rose-50 p-2 rounded-lg transition-colors">✕</button>
                         </td>
                     </tr>
                 `).join('');
@@ -187,7 +194,8 @@
 
         document.getElementById('deliveryForm').onsubmit = (e) => {
             e.preventDefault();
-            const record = {
+            const id = document.getElementById('editId').value;
+            const item = {
                 menor: document.getElementById('minor').value,
                 adulto: document.getElementById('adult').value,
                 dni: document.getElementById('dni').value,
@@ -196,56 +204,80 @@
                 firma: canvas.toDataURL()
             };
 
-            const tx = db.transaction(["entregas"], "readwrite");
-            tx.objectStore("entregas").add(record);
-            tx.oncomplete = () => {
-                loadTable();
-                toggleModal();
-                e.target.reset();
-            };
+            const tx = db.transaction("recogidas", "readwrite");
+            const store = tx.objectStore("recogidas");
+
+            if(id) {
+                item.id = Number(id);
+                store.put(item);
+            } else {
+                store.add(item);
+            }
+
+            tx.oncomplete = () => { loadTable(); closeModal(); };
         };
 
-        // Advanced Excel Export with Images
+        function editItem(id) {
+            const tx = db.transaction("recogidas", "readonly");
+            const store = tx.objectStore("recogidas");
+            store.get(id).onsuccess = (e) => {
+                const r = e.target.result;
+                document.getElementById('editId').value = r.id;
+                document.getElementById('minor').value = r.menor;
+                document.getElementById('adult').value = r.adulto;
+                document.getElementById('dni').value = r.dni;
+                document.getElementById('date').value = r.fecha;
+                document.getElementById('time').value = r.hora;
+                
+                const img = new Image();
+                img.onload = () => { clearSig(); ctx.drawImage(img, 0, 0); };
+                img.src = r.firma;
+
+                document.getElementById('modalTitle').innerText = "Editar Registro";
+                openModal(true);
+            };
+        }
+
+        function deleteItem(id) {
+            if(confirm("¿Eliminar este registro permanentemente?")) {
+                const tx = db.transaction("recogidas", "readwrite");
+                tx.objectStore("recogidas").delete(id);
+                tx.oncomplete = () => loadTable();
+            }
+        }
+
+        // --- EXPORTAR A EXCEL (ExcelJS) ---
         async function exportToExcel() {
             const workbook = new ExcelJS.Workbook();
             const sheet = workbook.addWorksheet('Recogidas');
-
+            
             sheet.columns = [
                 { header: 'Fecha', key: 'fecha', width: 15 },
                 { header: 'Hora', key: 'hora', width: 10 },
                 { header: 'Menor', key: 'menor', width: 25 },
-                { header: 'Recoge', key: 'adulto', width: 25 },
+                { header: 'Adulto', key: 'adulto', width: 25 },
                 { header: 'DNI', key: 'dni', width: 15 },
-                { header: 'Firma Responsable', key: 'firma', width: 30 }
+                { header: 'Firma', key: 'firma', width: 30 }
             ];
 
-            const transaction = db.transaction(["entregas"], "readonly");
-            const registros = await new Promise(res => {
-                transaction.objectStore("entregas").getAll().onsuccess = (e) => res(e.target.result);
+            const tx = db.transaction("recogidas", "readonly");
+            const items = await new Promise(res => {
+                tx.objectStore("recogidas").getAll().onsuccess = (e) => res(e.target.result);
             });
 
-            for (let i = 0; i < registros.length; i++) {
-                const r = registros[i];
-                const rowNumber = i + 2;
-                sheet.addRow(r);
-
-                const imageId = workbook.addImage({
-                    base64: r.firma,
-                    extension: 'png'
-                });
-
-                sheet.addImage(imageId, {
-                    tl: { col: 5, row: rowNumber - 1 },
-                    ext: { width: 120, height: 45 }
-                });
-                sheet.getRow(rowNumber).height = 40;
+            for(let i=0; i < items.length; i++){
+                const r = items[i];
+                const row = sheet.addRow(r);
+                const imgId = workbook.addImage({ base64: r.firma, extension: 'png' });
+                sheet.addImage(imgId, { tl: { col: 5, row: i+1 }, ext: { width: 120, height: 45 } });
+                sheet.getRow(i+2).height = 40;
             }
 
             const buffer = await workbook.xlsx.writeBuffer();
             const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `Registro_Recogidas_${new Date().toLocaleDateString()}.xlsx`;
+            link.download = `Recogidas_Export.xlsx`;
             link.click();
         }
     </script>
